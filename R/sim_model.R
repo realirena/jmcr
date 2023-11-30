@@ -18,12 +18,14 @@ Q = 2 # no of predictor markers
 I = 100 # no of subjects
 J = 5 # no of time points (days)
 
-b0_int_est <- data.frame(read.csv("/b0_int_est_0627.csv"))
+## in order to generate data that looks like real data, we use pre-generated values
+## these are obtained by running the first stage of the model on a subset of data (described more in the paper)
+b0_int_est <- data.frame(read.csv("/for_simulation/b0_int_est_0627.csv"))
 ## samples for the means and v-cov of the B-spline 
-theta_Sigma_est <- data.frame(read.csv("/beta_Sigma_est_0627.csv"))
-Sigma_est <- data.frame(read.csv("/Sigma_est_0627.csv"))
-beta_est <- data.frame(read.csv("/beta_est_0627.csv"))
-Sigma0_est <- data.frame(read.csv("/Sigma0_est_0627.csv"))
+theta_Sigma_est <- data.frame(read.csv("/for_simulation/beta_Sigma_est_0627.csv"))
+Sigma_est <- data.frame(read.csv("/for_simulation/Sigma_est_0627.csv"))
+beta_est <- data.frame(read.csv("/for_simulation/beta_est_0627.csv"))
+Sigma0_est <- data.frame(read.csv("/for_simulation/Sigma0_est_0627.csv"))
 beta1 <-  beta_est[1:5, 2]
 beta2 <-  beta_est[6:10, 2]
 
