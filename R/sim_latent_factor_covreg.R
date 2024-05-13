@@ -31,8 +31,9 @@ timepoints = id_time[,1]
 ## loadings matrix: 
 theta1 <- c(1, 0.00, 0.25, 0.00, 0.80, 0.00, 0.50, 0.13, 0.00, 0.00)
 theta2 <- c(0.00,1, 0.25, 0.40, 0.00, 0.50, 0.00, 0.01, 0.5, -0.30)
-theta3  <- c(0.00,1, 0.25, 0.40, 0.00, 0.50, 0.00, 0.01, 0.5, -0.30)
-theta4  <- c(0.00,1, 0.25, 0.40, 0.00, 0.50, 0.00, 0.01, 0.5, -0.30)
+
+theta3  <- c(0.00, 0.00,1, 0.3, -0.25, 0.4, 0.1, 0.15, 0.00, 0.00)
+theta4  <- c(0.00, 0.00, 0.00,1, 0.30, 0.00, 0.00, 0.00, 0.00, 0.00)
 
 
 Theta <-cbind(theta1, theta2, theta3, theta4) # the loading matrix
@@ -40,17 +41,28 @@ Theta <-cbind(theta1, theta2, theta3, theta4) # the loading matrix
 ### now set up the basis function for the means and the covariances 
 
 ## linear trend: 
-linear_basis <- splines::bs(time[1:J], df=1, knots=c(5, 7.5, 12.5, 15))
+linear_basis <- splines::bs(time[1:J], knots=c(5, 7.5, 12.5, 15))
 ## put 1 knot at time = 10 
-cov_basis <- splines::bs(time[1:J], df=0, knots=c(10)) 
+cov_basis1 <- as.matrix(splines::bs(time[1:J], degree=1, knots=c(10)))
 
-Lambda <- Theta%*%cov_basis 
+cov_basis2 <- as.matrix(splines::bs(time[1:J], degree=1, knots=c(5)))
 
+Lambda <- matrix(nrow=I, ncol=L)
+
+cov_basis1%*%b1_cov
+cov_basis2%*%b2_cov
+
+Theta%*%t(cov_basis[i,])
 
 ## coefs for trend 1: 
-b1 <- rnorm(ncol(linear_basis), 0, 1)
-b2 <- rnorm(ncol(linear_basis), 0, 0.25)
+b1_cov <- rnorm(ncol(cov_basis), 0, 1)
+b2_cov <- rnorm(ncol(cov_basis), 0, 0.25)
 
+
+
+
+
+B_cov <- cbind(b1_cov, b2_cov)
 
 B = cbind(b1, b2)
 
