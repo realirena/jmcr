@@ -49,20 +49,23 @@ cov_basis2 <- as.matrix(splines::bs(time[1:J], degree=1, knots=c(5)))
 
 Lambda <- matrix(nrow=I, ncol=L)
 
-cov_basis1%*%b1_cov
-cov_basis2%*%b2_cov
-
-Theta%*%t(cov_basis[i,])
+cov_basis <- list()
+cov_basis[[1]] <- cov_basis1
+cov_basis[[2]] <- cov_basis2
 
 ## coefs for trend 1: 
 b1_cov <- rnorm(ncol(cov_basis), 0, 1)
 b2_cov <- rnorm(ncol(cov_basis), 0, 0.25)
-
-
-
-
-
 B_cov <- cbind(b1_cov, b2_cov)
+
+eta = matrix(nrow=20, ncol=2)
+eta[,1] <- cov_basis[[1]]%*%B_cov[,1]
+eta[,2] <- cov_basis[[2]]%*%B_cov[,2]
+
+Theta%*%t(cov_basis[i,])
+
+
+
 
 B = cbind(b1, b2)
 
