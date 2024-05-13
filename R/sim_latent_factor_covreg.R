@@ -27,20 +27,24 @@ ids = id_time[,2]
 timepoints = id_time[,1]
 
 ### set the loadings matrix (Theta) - this is I x K, where K = size of the basis function 
+
 ## loadings matrix: 
 theta1 <- c(1, 0.00, 0.25, 0.00, 0.80, 0.00, 0.50, 0.13, 0.00, 0.00)
 theta2 <- c(0.00,1, 0.25, 0.40, 0.00, 0.50, 0.00, 0.01, 0.5, -0.30)
-theta2 <- c(0.00,1, 0.25, 0.40, 0.00, 0.50, 0.00, 0.01, 0.5, -0.30)
-theta2 <- c(0.00,1, 0.25, 0.40, 0.00, 0.50, 0.00, 0.01, 0.5, -0.30)
+theta3  <- c(0.00,1, 0.25, 0.40, 0.00, 0.50, 0.00, 0.01, 0.5, -0.30)
+theta4  <- c(0.00,1, 0.25, 0.40, 0.00, 0.50, 0.00, 0.01, 0.5, -0.30)
 
-Theta <-cbind(theta1, theta2) # the loading matrix
+
+Theta <-cbind(theta1, theta2, theta3, theta4) # the loading matrix
 
 ### now set up the basis function for the means and the covariances 
 
 ## linear trend: 
 linear_basis <- splines::bs(time[1:J], df=1, knots=c(5, 7.5, 12.5, 15))
-cov_basis <- splines::bs(time[1:J], df=1, knots=c(10)) 
+## put 1 knot at time = 10 
+cov_basis <- splines::bs(time[1:J], df=0, knots=c(10)) 
 
+Lambda <- Theta%*%cov_basis 
 
 
 ## coefs for trend 1: 
