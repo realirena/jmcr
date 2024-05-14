@@ -51,11 +51,11 @@ data {
   int<lower=1> I; // number of individuals 
   int<lower=1> L; // number of latent factors 
   int<lower=1> K; // dim of the basis expansion on time 
-  int<lower=1> id[N]; //array of subject ids (length N in order to do the longitudinal estimation)
+  int<lower=1> S_K; //dim of the covariance basis expansion
+  // int<lower=1> id[N]; //array of subject ids (length N in order to do the longitudinal estimation)
   matrix[N,I] x; // the variable to be forecasted - in this case, number of applicants 
-  vector[N] time; // vector that stores the time index 
-  matrix[N, K] mu_design; // this is the design matrix for how the means of the factors evolve 
-  matrix[N, K] S_design; // this is the design matrix for how the factor variances and correlations evolve
+  matrix[N, K] mu_design[L]; // this is the design matrix for how the means of the factors evolve 
+  matrix[N, S_K] S_design[L]; // this is the design matrix for how the factor variances and correlations evolve
 }
 
 // The parameters accepted by the model.
@@ -68,6 +68,8 @@ parameters {
   cholesky_factor_corr[L] S_Omega;  // prior correlation (for the covariance matrix of Bijs)
   vector<lower=0>[L] theta_tau; 
   cholesky_factor_corr[L] theta_Omega;  // prior correlation (for the covariance matrix of Bijs)
+  vector[K] B_mu[L]; 
+  matrix[S_K, L] S_mu;
 }
 
 transformed parameters {
@@ -77,7 +79,8 @@ transformed parameters {
    matrix[I,I] S[N]; 
    matrix[I,I] Sigma0;
    matrix[L,L] theta_Sigma;
-   matrix[I, K] Lambda[N];
+   matrix[I, L] Lambda[N];
+   matrix[N, L] eta;
    
    Sigma0 =  diag_pre_multiply(tau, Omega) * diag_pre_multiply(tau, Omega)';
    theta_Sigma=diag_pre_multiply(theta_tau, theta_Omega) * diag_pre_multiply(theta_tau, theta_Omega)';
@@ -89,12 +92,16 @@ transformed parameters {
   } 
    
   for(n in 1:N){
-    Lambda[n] =exp(Theta*S_design[n,]');
+    for(l in 1:L){
+      eta[n,l] = dot_product(S_design[l][n,], S_mu[,l]);
+      Lambda[n][,l] =exp(Theta[,l]*eta[n,l]);
+    }
     S[n] =Lambda[n]*Lambda[n]' + Sigma0; // computes the covariance matrix at the n'th timepoint 
   }
 }
 
 model {
+    matrix[N, L] phi;
     Omega ~ lkj_corr_cholesky(1);
     tau ~ cauchy(0,1);
     S_beta ~ normal(0, 10);
@@ -103,8 +110,15 @@ model {
     theta_tau ~ cauchy(0, 1);
     theta_Omega ~ lkj_corr_cholesky(1);
     Theta_raw ~std_normal();
+    for(l in 1:L){
+     S_mu[,l] ~ std_normal();
+     B_mu[,l] ~ std_normal();
+    }
     for(n in 1:N){
-      x[n] ~ multi_normal((Lambda[n]*mu_design[n,]')', S[n]);
+      for(l in 1:L){
+       phi[n,l] = dot_product(mu_design[l][n,],B_mu[l]);
+      }
+      x[n] ~ multi_normal(Lambda[n]*(phi[n,]'), S[n]);
     }
   }
 

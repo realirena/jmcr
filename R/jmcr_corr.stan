@@ -51,6 +51,7 @@ data {
   int<lower=1> I; // number of individuals 
   int<lower=1> ids[N];
   int<lower=1>Q; //no. of biomarkers 
+  int<lower=1> n_cov;
  // int<lower=1> P; //no of mean basis functions
   int<lower=1> L;
   int<lower=1> L_S;
@@ -59,6 +60,7 @@ data {
   vector[N] y;
   matrix[N, L] b_spline;
   matrix[N, L_S] S_b_spline;
+  matrix[N, n_cov] other_covs;
 //  matrix[Q,Q] Sigma0;
 // input these as data for now; we need to estimate these later
   int<lower = 0, upper = 1> simulate; 
@@ -87,6 +89,7 @@ parameters {
   real a0;
   real a0_time;
   real ran_eff[I];
+  vector[n_cov] phi;
   real<lower=0> ran_eff_tau;
   real<lower=0> outcome_sigma;
 }
@@ -100,11 +103,8 @@ transformed parameters {
    matrix[Q,Q] Sigma0;
    matrix[L_S,L_S] theta_Sigma[Q];
    //real ran_eff[I];
-    matrix[Q,Q] gamma;
-   matrix[Q,Q] gamma_time;
+   vector[Q+choose(Q,2)] S_corr[N];
     
-   gamma = to_triangular(gamma_flat, Q);
-   gamma_time = to_triangular(gamma_flat_time, Q);
   Sigma0 =  diag_pre_multiply(tau, Omega) * diag_pre_multiply(tau, Omega)';
    for(q in 1:Q){
     Sigma[q]=  diag_pre_multiply(S_tau[q], S_Omega[q]) * diag_pre_multiply(S_tau[q], S_Omega[q])';
@@ -120,6 +120,9 @@ transformed parameters {
     for(n in 1:N){
        // print(Theta[ids[n]]*to_vector(S_b_spline[n,]));
         S[n] =(exp(Theta[ids[n]]*S_b_spline[n,]'))*(exp(Theta[ids[n]]*S_b_spline[n,]'))' + Sigma0;
+        S_corr[n][1] = S[n][1,1];
+        S_corr[n][3] = S[n][2,2];
+        S_corr[n][2] = S[n][2,1]/(sqrt(S[n][1,1])*sqrt(S[n][2,2]));
      }
 }
 
@@ -136,6 +139,7 @@ model {
   alpha_time ~ normal(0,10);
   outcome_sigma ~ cauchy(0, 2.5);
   ran_eff_tau ~ cauchy(0,2.5); 
+  phi~normal(0,10); 
 
    b0_int ~ normal(0,10);
    Omega ~ lkj_corr_cholesky(1);
@@ -166,22 +170,22 @@ model {
       }
       x[n] ~ multi_normal(x_mu[n], S[n]);
       // y_mu[n] = a0+ time[n]*a0_time  + dot_product(x_mu[n,],alpha) + ran_eff[ids[n]];
-      y_mu[n] = a0 + dot_product(x_mu[n,],alpha)+ time[n]*a0_time + sum(S[n] .* gamma) + sum(S[n] .* gamma_time)*time[n]  + dot_product(x_mu[n,],alpha_time)*time[n]  + ran_eff[ids[n]];
+      y_mu[n] = a0 + dot_product(x_mu[n,],alpha)+ time[n]*a0_time + sum(S_corr[n] .* gamma_flat) + sum(S_corr[n] .* gamma_flat_time)*time[n]  + dot_product(x_mu[n,],alpha_time)*time[n] + other_covs[n,]*phi  + ran_eff[ids[n]];
       y[n] ~ normal(y_mu[n], outcome_sigma);
     }
   }
 }
 // 
-//   generated quantities {
-//       matrix[N,Q] sim_x; 
-//       vector[Q] x_mu[N];
-//       vector[N] sim_y;
-// //    //   //   simulate hormone data instead of using the data to generate it
-//      for(n in 1:N){
-//        for(q in 1:Q){
-//           x_mu[n][q] = b0_int[q] + dot_product(B0[ids[n]][,q], b_spline[n,]);
-//        }
-//     sim_x[n,] = to_row_vector(multi_normal_rng(x_mu[n], S[n]));
-//     sim_y[n] =normal_rng(a0 + dot_product(x_mu[n,],alpha)+ time[n]*a0_time + sum(S[n] .* gamma) + sum(S[n] .* gamma_time)*time[n]  + dot_product(x_mu[n,],alpha_time)*time[n]  + ran_eff[ids[n]], outcome_sigma);
-//    }
-// }
+  generated quantities {
+      matrix[N,Q] sim_x;
+      vector[Q] x_mu[N];
+      vector[N] sim_y;
+//    //   //   simulate hormone data instead of using the data to generate it
+     for(n in 1:N){
+       for(q in 1:Q){
+          x_mu[n][q] = b0_int[q] + dot_product(B0[ids[n]][,q], b_spline[n,]);
+       }
+    sim_x[n,] = to_row_vector(multi_normal_rng(x_mu[n], S[n]));
+    sim_y[n] =normal_rng(a0 + dot_product(x_mu[n,],alpha)+ time[n]*a0_time +  sum(S_corr[n] .* gamma_flat) + sum(S_corr[n] .* gamma_flat_time)*time[n]  + dot_product(x_mu[n,],alpha_time)*time[n] + other_covs[n,]*phi + ran_eff[ids[n]], outcome_sigma);
+   }
+}
